@@ -1,0 +1,13 @@
+{
+    "name": "hello-world",
+    "version": "0.0.1",
+    "description": "一份简单的扩展包",
+    "author": "Cocos Creator",
+    "main": "main.js",
+    "editor": "^1.0.0",
+    "menu": {
+      "Packages/HelloWorld": {
+        "message": "say-hello"
+      }
+    }
+  }
