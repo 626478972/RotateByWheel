@@ -1,10 +1,15 @@
-import { _decorator, Component, Node, CameraComponent, systemEvent, SystemEvent, EventMouse, math, Vec3 } from 'cc';
-const { ccclass, property } = _decorator;
+import { _decorator, Component, Node, CameraComponent as Camera, systemEvent, SystemEvent, EventMouse, math, Vec3, utils, primitives, ModelComponent, Material, EffectAsset, v3 } from 'cc';
+const { ccclass, property, executeInEditMode } = _decorator;
 
 @ccclass('main')
+@executeInEditMode
 export class main extends Component {
-    @property(CameraComponent)
-    camera: CameraComponent = null;
+    @property(Camera)
+    camera: Camera = null;
+
+
+    @property(Material)
+    ma: Material = null;
 
     private rotationTime: number = 0;
     private rotationDT: number = 100;
@@ -14,9 +19,52 @@ export class main extends Component {
     }
 
 
-    start () {
+    start() {
         this.rotationTime = 0;
         systemEvent.on(SystemEvent.EventType.MOUSE_WHEEL, this.onMoushWheel, this);
+
+
+        let boxs = primitives.box();
+
+        let vertices = boxs.positions;
+        let normals = boxs.normals;
+        let dict = {};
+        for (let i = 0; i < vertices.length; i += 3) {
+            let key = vertices[i] + ',' + vertices[i + 1] + ',' + vertices[i + 2];
+            if (!dict[key]) {
+                dict[key] = [];
+                dict[key].push(i);
+            } else {
+                dict[key].push(i);
+            }
+        }
+        for (let key in dict) {
+            let arr = dict[key];
+            let x = 0, y = 0, z = 0;
+            for (let i = 0; i < arr.length; i++) {
+                let index = arr[i];
+                x += normals[index];
+                y += normals[index + 1];
+                z += normals[index + 2];
+            }
+            x /= arr.length;
+            y /= arr.length;
+            z /= arr.length;
+            for (let i = 0; i < arr.length; i++) {
+                let index = arr[i];
+                normals[index] = x;
+                normals[index + 1] = y;
+                normals[index + 2] = z;
+            }
+        }
+
+        let m = utils.createMesh(boxs);
+        let n = new Node();
+        let mo = n.addComponent(ModelComponent);
+        mo.material = this.ma;
+        mo.mesh = m;
+
+        this.node.addChild(n);
     }
 
     private playTrans(): void {
@@ -32,12 +80,12 @@ export class main extends Component {
     }
 
     private getScrollY(): number {
-        if (Math.abs(this.rotationTime) < 100) {
+        if (Math.abs(this.rotationTime) < 50) {
+            this.rotationDT = 10;
+        } else if (Math.abs(this.rotationTime) < 100) {
             this.rotationDT = 16;
-        } else if (Math.abs(this.rotationTime) < 1000) {
-            this.rotationDT = 30;
         } else if (Math.abs(this.rotationTime) < 3000) {
-            this.rotationDT = 60;
+            this.rotationDT = 40;
         } else if (Math.abs(this.rotationTime) < 6000) {
             this.rotationDT = 100;
         } else if (Math.abs(this.rotationTime) < 10000) {
@@ -74,12 +122,12 @@ export class main extends Component {
          * 往上滚是正
          * 往下滚是负
          */
-        let scrollY =  event.getScrollY();
+        let scrollY = event.getScrollY();
         this.rotationTime += scrollY * 10;
     }
 
     // 根据自身方向，转化方向
-    private _getDirection (x: number, y: number, z: number) {
+    private _getDirection(x: number, y: number, z: number) {
         const result = new Vec3(x, y, z);
         math.Vec3.transformQuat(result, result, this.node.getRotation());
         return result;
